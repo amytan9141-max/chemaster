@@ -1,6 +1,37 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Ion, ChemicalEquation, Language, EquationTopic, EquationChallenge, EquationComponent } from '../types';
 
+const compressImage = async (base64: string, maxWidth = 800, quality = 0.7): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = base64;
+    img.onload = () => {
+
+      let width = img.width;
+      let height = img.height;
+      
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+      
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      
+
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, width, height);
+      
+
+      const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+      resolve(compressedBase64);
+    };
+    img.onerror = reject;
+  });
+};
+
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 const visionModel = 'gemini-3-pro-preview';
 const textModel = 'gemini-3-flash-preview';
@@ -231,16 +262,18 @@ export const generateIons = async (count: number = 6, difficulty: string = 'medi
 // Fix: Updated generateContent call to follow guidelines for multi-part contents and JSON response schemas.
 export const evaluateHandwrittenAnswers = async (imageBase64: string, questions: any[]): Promise<EvaluationResult> => {
   try {
-    console.log('Calling evaluation function with', questions.length, 'questions');
+    console.log('Original image length:', imageBase64.length);
     
-    // 調用 Netlify Function 而不是直接調用 Google AI
+    const compressedImage = await compressImage(imageBase64, 800, 0.6);
+    console.log('Compressed image length:', compressedImage.length);
+    
     const response = await fetch('/.netlify/functions/evaluate-handwriting', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        imageBase64,
+        imageBase64: compressedImage,
         questions
       })
     });
@@ -254,7 +287,6 @@ export const evaluateHandwrittenAnswers = async (imageBase64: string, questions:
     const result = await response.json();
     console.log('Evaluation result:', result);
     
-    // 檢查是否使用了降級方案
     if (result._offline) {
       console.log('Using offline fallback evaluation');
     }
@@ -264,7 +296,7 @@ export const evaluateHandwrittenAnswers = async (imageBase64: string, questions:
   } catch (error) {
     console.error('Failed to evaluate handwriting:', error);
     
-    // 完全失敗時的降級方案
+
     return {
       score: questions.length,
       results: questions.map((q, index) => ({
