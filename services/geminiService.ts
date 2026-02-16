@@ -1,12 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Ion, ChemicalEquation, Language, EquationTopic, EquationChallenge, EquationComponent } from '../types';
 
-const compressImage = async (base64: string, maxWidth = 800, quality = 0.7): Promise<string> => {
+const compressImage = async (base64: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.src = base64;
     img.onload = () => {
 
+      const maxWidth = 600;
+      const quality = 0.4;
+      
       let width = img.width;
       let height = img.height;
       
@@ -15,25 +18,24 @@ const compressImage = async (base64: string, maxWidth = 800, quality = 0.7): Pro
         width = maxWidth;
       }
       
-
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
       
-
       const ctx = canvas.getContext('2d');
       ctx?.drawImage(img, 0, 0, width, height);
       
-
       const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+      console.log(`壓縮率: ${Math.round((compressedBase64.length / base64.length) * 100)}%`);
       resolve(compressedBase64);
     };
     img.onerror = reject;
   });
 };
 
+
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-const visionModel = 'gemini-3-pro-preview';
+const visionModel = 'gemini-3-flash-preview';
 const textModel = 'gemini-3-flash-preview';
 
 export interface EvaluationResult {
@@ -259,44 +261,58 @@ export const generateIons = async (count: number = 6, difficulty: string = 'medi
   return shuffleArray(pool).slice(0, count);
 };
 
-// Fix: Updated generateContent call to follow guidelines for multi-part contents and JSON response schemas.
 export const evaluateHandwrittenAnswers = async (imageBase64: string, questions: any[]): Promise<EvaluationResult> => {
   try {
-    console.log('Original image length:', imageBase64.length);
+    console.log('原始圖片大小:', Math.round(imageBase64.length / 1024), 'KB');
     
-    const compressedImage = await compressImage(imageBase64, 800, 0.6);
-    console.log('Compressed image length:', compressedImage.length);
+    const compressedImage = await compressImage(imageBase64);
+    console.log('壓縮後圖片大小:', Math.round(compressedImage.length / 1024), 'KB');
     
-    const response = await fetch('/.netlify/functions/evaluate-handwriting', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        imageBase64: compressedImage,
-        questions
-      })
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    try {
+      const response = await fetch('/.netlify/functions/evaluate-handwriting', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageBase64: compressedImage,
+          questions
+        }),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Server response not OK:', response.status, errorText);
-      throw new Error(`Server responded with ${response.status}`);
-    }
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('伺服器回應錯誤:', response.status, errorText);
+        throw new Error(`Server responded with ${response.status}`);
+      }
 
-    const result = await response.json();
-    console.log('Evaluation result:', result);
-    
-    if (result._offline) {
-      console.log('Using offline fallback evaluation');
+      const result = await response.json();
+      console.log('評分結果:', result);
+      
+      if (result._offline) {
+        console.log('使用離線備用評分');
+      }
+      
+      return result;
+
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.error('請求超時（30秒）');
+        throw new Error('Request timeout');
+      }
+      throw fetchError;
     }
-    
-    return result;
 
   } catch (error) {
-    console.error('Failed to evaluate handwriting:', error);
+    console.error('評分失敗:', error);
     
-
     return {
       score: questions.length,
       results: questions.map((q, index) => ({
