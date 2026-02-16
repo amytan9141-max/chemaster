@@ -8,7 +8,7 @@
   node_bundler = "esbuild"
 
 [functions."evaluate-handwriting"]
-  timeout = 30
+  timeout = 60
   memory = 1024
 
 [[redirects]]
