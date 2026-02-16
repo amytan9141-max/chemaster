@@ -27,10 +27,13 @@ export const handler = async (event) => {
 
   try {
     const { imageBase64, questions } = JSON.parse(event.body);
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.VITE_GEMINI_API_KEY;
+
+    console.log('API Key exists:', !!apiKey);
+    console.log('Questions count:', questions?.length);
 
     if (!apiKey) {
-      throw new Error('API key not configured');
+      throw new Error('VITE_GEMINI_API_KEY not found in environment variables');
     }
 
     const ai = new GoogleGenAI({ apiKey });
