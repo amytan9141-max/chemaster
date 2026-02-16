@@ -231,67 +231,50 @@ export const generateIons = async (count: number = 6, difficulty: string = 'medi
 // Fix: Updated generateContent call to follow guidelines for multi-part contents and JSON response schemas.
 export const evaluateHandwrittenAnswers = async (imageBase64: string, questions: any[]): Promise<EvaluationResult> => {
   try {
-     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-     const response = await ai.models.generateContent({
-       model: visionModel,
-       contents: {
-         parts: [
-           {
-             inlineData: {
-               mimeType: 'image/jpeg',
-               data: imageBase64.split(',')[1],
-             },
-           },
-           {
-             text: `你是一位化學老師。這是一張學生的手寫作業照片。
-           題目列表如下：${JSON.stringify(questions)}
-           請檢查學生的手寫答案是否正確（化學式、上標、下標）。
-           請以 JSON 格式回傳評分結果，包含：
-           1. score: 總分 (15分滿分)
-           2. results: 陣列，每個元素包含 question, expected, studentWrote, isCorrect
-           3. overallFeedback: 總體評語。`,
-           },
-         ]
-       },
-       config: {
-         responseMimeType: "application/json",
-         responseSchema: {
-           type: Type.OBJECT,
-           properties: {
-             score: { type: Type.NUMBER },
-             results: {
-               type: Type.ARRAY,
-               items: {
-                 type: Type.OBJECT,
-                 properties: {
-                   question: { type: Type.STRING },
-                   expected: { type: Type.STRING },
-                   studentWrote: { type: Type.STRING },
-                   isCorrect: { type: Type.BOOLEAN },
-                   feedback: { type: Type.STRING }
-                 },
-                 required: ["question", "expected", "studentWrote", "isCorrect"]
-               }
-             },
-             overallFeedback: { type: Type.STRING }
-           },
-           required: ["score", "results", "overallFeedback"]
-         }
-       }
-     });
-     
-     const text = response.text || "{}";
-     return JSON.parse(text);
-  } catch (e) {
+    console.log('Calling evaluation function with', questions.length, 'questions');
+    
+    // 調用 Netlify Function 而不是直接調用 Google AI
+    const response = await fetch('/.netlify/functions/evaluate-handwriting', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        imageBase64,
+        questions
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Server response not OK:', response.status, errorText);
+      throw new Error(`Server responded with ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log('Evaluation result:', result);
+    
+    // 檢查是否使用了降級方案
+    if (result._offline) {
+      console.log('Using offline fallback evaluation');
+    }
+    
+    return result;
+
+  } catch (error) {
+    console.error('Failed to evaluate handwriting:', error);
+    
+    // 完全失敗時的降級方案
     return {
-      score: Math.floor(Math.random() * 6) + 10,
-      results: questions.map(q => ({
-        question: q.zh,
-        expected: q.formula,
-        studentWrote: q.formula,
-        isCorrect: true
+      score: questions.length,
+      results: questions.map((q, index) => ({
+        question: q.zh || q.question || `Question ${index + 1}`,
+        expected: q.formula || q.expected || '',
+        studentWrote: q.formula || q.expected || '',
+        isCorrect: true,
+        feedback: '系統暫時無法分析圖片，已使用標準答案評分。'
       })),
-      overallFeedback: "良好！部分字跡需清晰。"
+      overallFeedback: '網路或服務暫時不穩定，請稍後再試。'
     };
   }
 };
