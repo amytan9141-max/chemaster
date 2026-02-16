@@ -1,7 +1,7 @@
 // netlify/functions/evaluate-handwriting/evaluate-handwriting.js
 import { GoogleGenAI, Type } from "@google/genai";
 
-const visionModel = 'gemini-1.5-pro'; // 使用穩定的模型版本
+const visionModel = 'gemini-3-flash-preview';
 
 export const handler = async (event) => {
   const headers = {
