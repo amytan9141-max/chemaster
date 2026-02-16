@@ -37,17 +37,11 @@ const App: React.FC = () => {
     if (!user) {
       user = {
         name,
-        progress: { level1MaxStage: 12 }, // 全部開放：初始進度設為 12
+        progress: { level1MaxStage: 3 }, // 初始開放前三個階段
         challengeAttempts: 3
       };
       saveUser(user);
-    } else {
-      // 確保舊用戶也能訪問所有關卡
-      if (user.progress.level1MaxStage < 12) {
-        user.progress.level1MaxStage = 12;
-        saveUser(user);
-      }
-    }
+    } 
 
     setCurrentUser(user);
     setCurrentScreen(Screen.HOME);
@@ -60,7 +54,6 @@ const App: React.FC = () => {
 
   const handleProgressUpdate = (newMaxStage: number) => {
     if (!currentUser) return;
-    // 雖然全開放，但仍保留更新邏輯以供未來擴展或標記進度
     if (newMaxStage > currentUser.progress.level1MaxStage) {
       const updatedUser: UserProfile = {
         ...currentUser,

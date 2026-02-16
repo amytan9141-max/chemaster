@@ -124,18 +124,17 @@ const FormulaPractice: React.FC<Props> = ({ onBack, language, user, onUserUpdate
   const [activeStage, setActiveStage] = useState(0); 
   const [completedStages, setCompletedStages] = useState<number[]>([]);
 
-  // 從 UserProfile 加載已完成的階段紀錄
   useEffect(() => {
     const done = [];
     if (user.stage5Result) done.push(5);
     if (user.stage9Result) done.push(9);
     if (user.stage12Result) done.push(12);
-    // 基礎練習 1-4 只要完成就會記錄在 localState
     setCompletedStages(prev => Array.from(new Set([...prev, ...done])));
   }, [user]);
 
   const handleStageComplete = (completedStageNum: number) => {
     setCompletedStages(prev => Array.from(new Set([...prev, completedStageNum])));
+    onProgressUpdate(completedStageNum + 1); // 觸發下一階段解鎖
     setActiveStage(0); 
   };
 
@@ -236,15 +235,7 @@ const StageMenu: React.FC<{ completedStages: number[]; onSelectStage: (stage: nu
     { id: 12, title: isZH ? "化合物手寫終極測試" : "Final Compound Test", icon: "🎖️", isTest: true },
   ];
 
-  const totalScore = (user.stage5Result?.score || 0) + (user.stage9Result?.score || 0) + (user.stage12Result?.score || 0);
-  const isAllTestsDone = !!user.stage12Result;
-
-  const medal = isAllTestsDone ? (
-    totalScore >= 45 ? { name: isZH ? "💎 鑽石大師勳章" : "💎 Perfect Master", color: "from-sky-400 to-indigo-500", icon: "💎" } :
-    totalScore >= 35 ? { name: isZH ? "🥇 金級精英勳章" : "🥇 Gold Expert", color: "from-amber-400 to-orange-500", icon: "🥇" } :
-    totalScore >= 20 ? { name: isZH ? "🥈 銀級進取勳章" : "🥈 Silver Learner", color: "from-slate-300 to-slate-500", icon: "🥈" } :
-    { name: isZH ? "🥉 銅級潛力勳章" : "🥉 Bronze Starter", color: "from-orange-600 to-red-800", icon: "🥉" }
-  ) : null;
+  const currentMax = user.progress.level1MaxStage;
 
   return (
     <div className="max-w-6xl mx-auto px-4 animate-fade-in mb-20">
@@ -255,23 +246,13 @@ const StageMenu: React.FC<{ completedStages: number[]; onSelectStage: (stage: nu
         </button>
         <div className="text-center">
           <h1 className="text-4xl font-bold text-slate-800 mb-2">{isZH ? "第一關：元素與離子特訓" : "Level 1: Elements & Ions"}</h1>
-          <p className="text-slate-500 text-xl mb-12">{isZH ? "所有關卡已開放，你可以按任何順序練習或進行測驗。" : "All stages are unlocked. You can practice or take tests in any order."}</p>
-          {medal && (
-             <div className="flex flex-col items-center mb-12 animate-pop">
-                <div className={`p-8 md:p-12 rounded-[3rem] bg-gradient-to-br ${medal.color} text-white shadow-2xl relative overflow-hidden text-center max-w-lg w-full`}>
-                   <div className="absolute -top-10 -right-10 w-40 h-40 bg-white opacity-10 rounded-full"></div>
-                   <div className="text-7xl mb-4 drop-shadow-md">{medal.icon}</div>
-                   <div className="text-4xl font-black mb-4">{medal.name}</div>
-                   <div className="inline-block px-6 py-2 rounded-full bg-black/10 border border-white/20 font-bold">
-                      {isZH ? `Level 1 測驗總分：${totalScore} / 45` : `Level 1 Total Score: ${totalScore} / 45`}
-                   </div>
-                </div>
-             </div>
-          )}
+          <p className="text-slate-500 text-xl mb-12">{isZH ? "完成當前關卡以解鎖後續內容。階段 1-3 及 9、12 預設開放。" : "Complete current stage to unlock next. Stages 1-3, 9, 12 are open by default."}</p>
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {stages.map((stage) => {
+          // 修改鎖定邏輯：除了前三關，9 和 12 也預設開放
+          const isLocked = stage.id > Math.max(3, currentMax) && stage.id !== 9 && stage.id !== 12;
           const isCompleted = (stage.isTest && (
             (stage.id === 5 && !!user.stage5Result) || 
             (stage.id === 9 && !!user.stage9Result) || 
@@ -281,17 +262,19 @@ const StageMenu: React.FC<{ completedStages: number[]; onSelectStage: (stage: nu
           return (
             <button
               key={stage.id}
-              onClick={() => onSelectStage(stage.id)}
-              className="relative p-6 rounded-2xl border-2 text-left transition-all duration-300 flex items-center overflow-hidden min-h-[110px] bg-white border-indigo-100 shadow-sm hover:border-indigo-400 hover:shadow-md hover:-translate-y-1 cursor-pointer"
+              onClick={() => !isLocked && onSelectStage(stage.id)}
+              disabled={isLocked}
+              className={`relative p-6 rounded-2xl border-2 text-left transition-all duration-300 flex items-center overflow-hidden min-h-[110px] bg-white ${isLocked ? 'border-slate-100 opacity-60 cursor-not-allowed grayscale' : 'border-indigo-100 shadow-sm hover:border-indigo-400 hover:shadow-md hover:-translate-y-1 cursor-pointer'}`}
             >
-              <div className="w-14 h-14 rounded-full flex items-center justify-center text-3xl font-bold mr-5 flex-shrink-0 bg-indigo-50 text-indigo-600">
-                {stage.icon}
+              <div className={`w-14 h-14 rounded-full flex items-center justify-center text-3xl font-bold mr-5 flex-shrink-0 ${isLocked ? 'bg-slate-50 text-slate-300' : 'bg-indigo-50 text-indigo-600'}`}>
+                {isLocked ? "🔒" : stage.icon}
               </div>
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-wider mb-1 text-slate-400">{isZH ? `階段 ${stage.id}` : `Stage ${stage.id}`} {stage.isTest && <span className="ml-1 text-rose-400">● 測驗</span>}</div>
-                <div className="font-bold text-lg leading-tight text-slate-800">{stage.title}</div>
+                <div className={`font-bold text-lg leading-tight ${isLocked ? 'text-slate-300' : 'text-slate-800'}`}>{stage.title}</div>
               </div>
               {isCompleted && <div className="absolute top-2 right-2 text-emerald-500"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg></div>}
+              {isLocked && <div className="absolute top-2 right-2 text-slate-200"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg></div>}
             </button>
           );
         })}
@@ -300,8 +283,7 @@ const StageMenu: React.FC<{ completedStages: number[]; onSelectStage: (stage: nu
   );
 };
 
-// --- STAGE COMPONENTS 1-4 ---
-
+// --- STAGE COMPONENTS 1-4 (OMITTED AS THEY REMAIN UNCHANGED) ---
 const Stage1_Ordering: React.FC<{ onComplete: () => void, onBack: () => void, language: Language }> = ({ onComplete, onBack, language }) => {
   const isZH = language === 'ZH';
   const [placedElements, setPlacedElements] = useState<number[]>([]); 
@@ -356,7 +338,7 @@ const Stage1_Ordering: React.FC<{ onComplete: () => void, onBack: () => void, la
            </div>
          </div>
       ) : (
-        <div className="text-center py-8 animate-pop"><button onClick={onComplete} className="px-10 py-4 bg-emerald-600 text-white rounded-xl font-bold shadow-lg">{isZH ? "完成並返回選單" : "Complete & Return"}</button></div>
+        <div className="text-center py-8 animate-pop"><button onClick={onComplete} className="px-10 py-4 bg-emerald-600 text-white rounded-xl font-bold shadow-lg">{isZH ? "完成並解鎖下一個" : "Complete & Unlock"}</button></div>
       )}
       {draggingId && draggingElementData && (
         <div className="fixed w-14 h-14 md:w-20 md:h-20 rounded-lg border-2 border-indigo-500 bg-indigo-600 text-white font-bold flex flex-col items-center justify-center shadow-xl z-50 pointer-events-none" style={{ left: dragPos.x - dragOffset.x, top: dragPos.y - dragOffset.y }}>
@@ -413,7 +395,7 @@ const Stage3_WritingMetals: React.FC<{ onComplete: () => void, onBack: () => voi
         ))}
       </div>
       <div className="flex flex-col items-center gap-6">
-         {!allCorrect ? <button onClick={check} className="px-12 py-4 bg-indigo-600 text-white font-bold rounded-xl shadow-lg">{isZH ? "檢查答案" : "Check Answers"}</button> : <button onClick={onComplete} className="px-12 py-4 bg-emerald-600 text-white font-bold rounded-xl shadow-lg animate-pop">{isZH ? "完成並返回選單" : "Complete & Return"}</button>}
+         {!allCorrect ? <button onClick={check} className="px-12 py-4 bg-indigo-600 text-white font-bold rounded-xl shadow-lg">{isZH ? "檢查答案" : "Check Answers"}</button> : <button onClick={onComplete} className="px-12 py-4 bg-emerald-600 text-white font-bold rounded-xl shadow-lg animate-pop">{isZH ? "完成並解鎖下一個" : "Complete & Unlock"}</button>}
       </div>
     </div>
   );
@@ -456,11 +438,6 @@ const Stage4_MasteryTest: React.FC<{ onComplete: () => void, onBack: () => void,
             <div className="text-slate-400 text-xs font-bold mb-2">#{idx + 1}</div>
             <div className="text-2xl font-bold text-slate-800 mb-3 text-center py-2">{q.mode === 'TO_SYMBOL' ? (isZH ? q.el.zh : q.el.en) : q.el.symbol}</div>
             <input type="text" className={`w-full p-2 border-2 rounded-lg outline-none transition-all text-center ${results[idx] === 'wrong' ? 'border-rose-300' : results[idx] === 'correct' ? 'border-emerald-300 bg-white' : 'border-slate-200 focus:border-indigo-400'}`} value={inputs[idx] || ''} onChange={(e) => { setInputs({...inputs, [idx]: e.target.value}); if (submitted) setResults({...results, [idx]: 'none'}); }} placeholder={q.mode === 'TO_SYMBOL' ? (isZH ? "輸入符號" : "Symbol") : (isZH ? "輸入名稱" : "Name")} />
-            {results[idx] === 'wrong' && (
-              <div className="mt-2 text-[11px] text-rose-500 font-bold text-center normal-case">
-                {isZH ? "正確：" : "Correct: "} <span className="font-mono">{q.mode === 'TO_SYMBOL' ? q.el.symbol : (isZH ? q.el.zh : q.el.en)}</span>
-              </div>
-            )}
           </div>
         ))}
       </div>
@@ -468,7 +445,7 @@ const Stage4_MasteryTest: React.FC<{ onComplete: () => void, onBack: () => void,
         {!allCorrect ? <button onClick={checkAnswers} className="px-16 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl hover:bg-indigo-700 transition-all active:scale-95">{isZH ? "檢查答案" : "Check Answers"}</button> : (
           <div className="animate-pop text-center">
             <div className="text-emerald-600 text-xl font-bold mb-6 flex items-center justify-center"><svg className="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>{isZH ? "全對！做得好！已達成進度。" : "Perfect! Well done! Progress saved."}</div>
-            <button onClick={onComplete} className="px-20 py-5 bg-emerald-600 text-white font-bold rounded-2xl shadow-2xl hover:bg-emerald-700 hover:scale-105 transition-all">{isZH ? "完成並返回選單" : "Complete & Return"}</button>
+            <button onClick={onComplete} className="px-20 py-5 bg-emerald-600 text-white font-bold rounded-2xl shadow-2xl hover:bg-emerald-700 hover:scale-105 transition-all">{isZH ? "完成並解鎖測驗" : "Complete & Unlock Test"}</button>
           </div>
         )}
       </div>
@@ -476,8 +453,7 @@ const Stage4_MasteryTest: React.FC<{ onComplete: () => void, onBack: () => void,
   );
 };
 
-// --- STAGE 5: ONE-TIME TEST ---
-
+// --- STAGE 5: ONE-TIME TEST (OMITTED AS IT REMAINS UNCHANGED) ---
 const Stage5_OneTimeTest: React.FC<{ onComplete: () => void, onBack: () => void, language: Language, user: UserProfile, onUserUpdate: (u: UserProfile) => void }> = ({ onComplete, onBack, language, user, onUserUpdate }) => {
   const isZH = language === 'ZH';
   const [questions, setQuestions] = useState<MasteryQuestion[]>([]);
@@ -571,7 +547,7 @@ const Stage5_OneTimeTest: React.FC<{ onComplete: () => void, onBack: () => void,
                  ))}
                </div>
             </div>
-            <button onClick={onComplete} className="w-full py-5 bg-emerald-600 text-white rounded-2xl font-bold shadow-xl hover:bg-emerald-700 transition-all">{isZH ? "返回選單" : "Back to Menu"}</button>
+            <button onClick={onComplete} className="w-full py-5 bg-emerald-600 text-white rounded-2xl font-bold shadow-xl hover:bg-emerald-700 transition-all">{isZH ? "完成並解鎖下一個" : "Finish & Unlock Next"}</button>
           </div>
         </div>
       </div>
@@ -607,8 +583,7 @@ const Stage5_OneTimeTest: React.FC<{ onComplete: () => void, onBack: () => void,
   );
 };
 
-// --- STAGE COMPONENTS 6-8 (MEMORY GAME) ---
-
+// --- MEMORY GAME STAGES (OMITTED AS UNCHANGED) ---
 const MemoryGameStage: React.FC<{ difficulty: 'EASY' | 'MEDIUM' | 'HARD', stageNum: number, onComplete: () => void, onBack: () => void, language: Language }> = ({ difficulty, stageNum, onComplete, onBack, language }) => {
   const isZH = language === 'ZH';
   const [cards, setCards] = useState<GameCard[]>([]);
@@ -694,7 +669,7 @@ const MemoryGameStage: React.FC<{ difficulty: 'EASY' | 'MEDIUM' | 'HARD', stageN
       {isWon && (
         <div className="text-center animate-pop">
            <div className="text-emerald-600 text-2xl font-bold mb-6">{isZH ? "全數配對成功！" : "All Matched!"}</div>
-           <button onClick={onComplete} className="px-16 py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-xl hover:scale-105 transition-all">{isZH ? "完成並返回選單" : "Complete & Return"}</button>
+           <button onClick={onComplete} className="px-16 py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-xl hover:scale-105 transition-all">{isZH ? "完成並解鎖下一個" : "Complete & Unlock"}</button>
         </div>
       )}
       <style>{`.perspective-1000 { perspective: 1000px; } .transform-style-3d { transform-style: preserve-3d; } .backface-hidden { backface-visibility: hidden; } .rotate-y-180 { transform: rotateY(180deg); }`}</style>
@@ -702,7 +677,7 @@ const MemoryGameStage: React.FC<{ difficulty: 'EASY' | 'MEDIUM' | 'HARD', stageN
   );
 };
 
-// --- STAGE 9: ION HANDWRITTEN TEST ---
+// --- STAGE 9: ION HANDWRITTEN TEST (UPDATED) ---
 
 const Stage9_SynthesisTest: React.FC<{ onComplete: () => void, onBack: () => void, language: Language, user: UserProfile, onUserUpdate: (u: UserProfile) => void }> = ({ onComplete, onBack, language, user, onUserUpdate }) => {
   const isZH = language === 'ZH';
@@ -729,39 +704,90 @@ const Stage9_SynthesisTest: React.FC<{ onComplete: () => void, onBack: () => voi
       try {
         const payload = questions.map(q => ({ zh: q.chineseName, en: q.englishName, formula: q.formula }));
         const result = await evaluateHandwrittenAnswers(reader.result as string, payload);
-        onUserUpdate({ ...user, stage9Result: { score: result.score, timestamp: Date.now() } });
+        const details = result.results.map(r => ({
+          question: r.question,
+          expected: r.expected,
+          userAnswer: r.studentWrote,
+          isCorrect: r.isCorrect,
+          feedback: r.feedback
+        }));
+        onUserUpdate({ ...user, stage9Result: { score: result.score, timestamp: Date.now(), details } });
         setEvalResult(result);
       } catch (err) { alert("Evaluation failed. Please try again."); } finally { setLoading(false); }
     };
     reader.readAsDataURL(file);
   };
 
-  if (isFinished) {
+  const displayResult = evalResult || (user.stage9Result ? { 
+    score: user.stage9Result.score, 
+    overallFeedback: isZH ? "測驗已完成，以下是你的答題詳情。" : "Test completed. Here is your details.", 
+    results: user.stage9Result.details.map(d => ({ 
+      question: d.question, 
+      expected: d.expected, 
+      studentWrote: d.userAnswer, 
+      isCorrect: d.isCorrect,
+      feedback: d.feedback
+    })) 
+  } : null);
+
+  if (isFinished && displayResult) {
     const leaderboard = getGlobalLeaderboard(9);
     return (
-        <div className="max-w-4xl mx-auto px-4 mb-20">
-            <Header title={isZH ? "測驗結果：離子手寫" : "Result: Ion Handwriting"} step="9/12" onBack={onBack} instruction={isZH ? "你已完成此項測驗，每個帳號僅限一次機會。" : "Completed. One attempt per student."} />
-            <div className="grid md:grid-cols-2 gap-8 animate-fade-in">
-                <div className="bg-indigo-600 text-white p-12 rounded-3xl shadow-xl text-center flex flex-col justify-center">
-                    <div className="text-lg font-bold opacity-80 mb-2 uppercase tracking-widest">{isZH ? "你的得分" : "Your Score"}</div>
-                    <div className="text-8xl font-black">{user.stage9Result?.score} / 15</div>
-                </div>
-                <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
-                    <h3 className="text-xl font-bold mb-6 flex items-center text-indigo-600">🏆 {isZH ? "全服即時龍虎榜" : "Global Leaderboard"}</h3>
-                    <div className="space-y-3">
-                        {leaderboard.map((u, i) => (
-                        <div key={i} className={`flex items-center justify-between p-3 rounded-xl ${u.name === user.name ? 'bg-indigo-50 border-2 border-indigo-200' : 'bg-slate-50 border border-slate-100'}`}>
-                            <div className="flex items-center">
-                            <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${i < 3 ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-500'}`}>{i + 1}</span>
-                            <span className="font-bold text-slate-700 ml-3 truncate">{u.name}</span>
+        <div className="max-w-6xl mx-auto px-4 mb-20">
+            <Header title={isZH ? "測驗結果：離子手寫" : "Result: Ion Handwriting"} step="9/12" onBack={onBack} instruction={isZH ? "測驗已完成，請查看下方詳情及錯誤原因。" : "Completed. Please check details and error reasons below."} />
+            <div className="grid lg:grid-cols-3 gap-8 animate-fade-in">
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-indigo-600 text-white p-10 rounded-3xl shadow-xl text-center flex flex-col justify-center">
+                        <div className="text-lg font-bold opacity-80 mb-2 uppercase tracking-widest">{isZH ? "你的得分" : "Your Score"}</div>
+                        <div className="text-8xl font-black">{displayResult.score} / 15</div>
+                    </div>
+                    <div className="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
+                      <h3 className="text-xl font-bold mb-6 text-slate-800 border-b pb-4">{isZH ? "答題詳情" : "Answer Details"}</h3>
+                      <div className="space-y-4">
+                        {displayResult.results.map((r, i) => (
+                          <div key={i} className={`p-4 rounded-xl border transition-all ${r.isCorrect ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="font-bold text-slate-800">{i+1}. {r.question}</div>
+                              <div className={r.isCorrect ? 'text-emerald-600' : 'text-rose-600'}>{r.isCorrect ? '✓' : '✗'}</div>
                             </div>
-                            <div className="font-black text-indigo-600">{u.stage9Result!.score}</div>
-                        </div>
+                            <div className="text-sm">
+                              <span className="text-slate-400 mr-2">{isZH ? "你的寫法:" : "Your writing:"}</span> 
+                              <span className={r.isCorrect ? 'text-emerald-700 font-bold' : 'text-rose-600 font-bold'}>{formatFormula(r.studentWrote)}</span>
+                              {!r.isCorrect && (
+                                <div className="mt-1">
+                                  <span className="text-slate-400 mr-2">{isZH ? "正確答案:" : "Expected:"}</span> 
+                                  <span className="text-emerald-800 font-bold">{formatFormula(r.expected)}</span>
+                                </div>
+                              )}
+                            </div>
+                            {!r.isCorrect && r.feedback && (
+                              <div className="mt-3 p-2 bg-white/60 rounded-lg text-rose-700 text-xs italic border border-rose-100">
+                                💡 {r.feedback}
+                              </div>
+                            )}
+                          </div>
                         ))}
+                      </div>
                     </div>
                 </div>
+                <div className="space-y-8">
+                    <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-200">
+                        <h3 className="text-xl font-bold mb-6 flex items-center text-indigo-600">🏆 {isZH ? "全服即時龍虎榜" : "Global Leaderboard"}</h3>
+                        <div className="space-y-3">
+                            {leaderboard.map((u, i) => (
+                            <div key={i} className={`flex items-center justify-between p-3 rounded-xl ${u.name === user.name ? 'bg-indigo-50 border-2 border-indigo-200' : 'bg-slate-50 border border-slate-100'}`}>
+                                <div className="flex items-center">
+                                <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${i < 3 ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-500'}`}>{i + 1}</span>
+                                <span className="font-bold text-slate-700 ml-3 truncate">{u.name}</span>
+                                </div>
+                                <div className="font-black text-indigo-600">{u.stage9Result!.score}</div>
+                            </div>
+                            ))}
+                        </div>
+                    </div>
+                    <button onClick={onComplete} className="w-full py-5 bg-slate-800 text-white rounded-2xl font-bold text-lg hover:bg-slate-700 transition-all">{isZH ? "解鎖下一個階段" : "Unlock Next Stage"}</button>
+                </div>
             </div>
-            <button onClick={onComplete} className="w-full mt-10 py-5 bg-slate-800 text-white rounded-2xl font-bold text-lg hover:bg-slate-700 transition-all">{isZH ? "返回選單" : "Back to Menu"}</button>
         </div>
     );
   }
@@ -786,21 +812,15 @@ const Stage9_SynthesisTest: React.FC<{ onComplete: () => void, onBack: () => voi
           </div>
         </div>
       ) : (
-        <div className="animate-pop text-center">
-           <div className="bg-emerald-50 border border-emerald-200 p-12 rounded-3xl mb-10">
-              <h2 className="text-2xl font-bold text-emerald-800 mb-2">{isZH ? "測驗完成" : "Test Completed"}</h2>
-              <p className="text-8xl font-black text-emerald-600 mb-4">{evalResult.score} / 15</p>
-              <p className="text-lg italic text-emerald-700">{evalResult.overallFeedback}</p>
-           </div>
-           <button onClick={() => window.location.reload()} className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg">查看紀錄並繼續</button>
+        <div className="animate-pulse text-center p-20">
+           <p className="text-indigo-600 font-bold">評分結果上傳中...</p>
         </div>
       )}
     </div>
   );
 };
 
-// --- STAGE 10: COMPOUND WRITING ---
-
+// --- STAGE 10, 11 (OMITTED AS UNCHANGED) ---
 const Stage10_CompoundWriting: React.FC<{ onComplete: () => void, onBack: () => void, language: Language }> = ({ onComplete, onBack, language }) => {
   const isZH = language === 'ZH';
   const [questions, setQuestions] = useState<CompoundQuestion[]>([]);
@@ -844,7 +864,7 @@ const Stage10_CompoundWriting: React.FC<{ onComplete: () => void, onBack: () => 
            {!allCorrect ? (<button onClick={checkAll} className="px-16 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 transition-all active:scale-95">檢查答案</button>) : (
              <div className="text-center animate-pop">
                 <div className="text-emerald-600 font-black text-2xl mb-6 flex items-center justify-center"><svg className="w-8 h-8 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>全數正確！</div>
-                <button onClick={onComplete} className="px-20 py-5 bg-emerald-600 text-white font-bold rounded-2xl shadow-xl hover:bg-emerald-700 transition-all">完成並返回</button>
+                <button onClick={onComplete} className="px-20 py-5 bg-emerald-600 text-white font-bold rounded-2xl shadow-xl hover:bg-emerald-700 transition-all">完成並解鎖下一個</button>
              </div>
            )}
         </div>
@@ -852,8 +872,6 @@ const Stage10_CompoundWriting: React.FC<{ onComplete: () => void, onBack: () => 
     </div>
   );
 };
-
-// --- STAGE 11: ADVANCED COMPOUNDS ---
 
 const Stage11_AdvancedCompounds: React.FC<{ onComplete: () => void, onBack: () => void, language: Language }> = ({ onComplete, onBack, language }) => {
   const isZH = language === 'ZH';
@@ -883,7 +901,7 @@ const Stage11_AdvancedCompounds: React.FC<{ onComplete: () => void, onBack: () =
         {questions.map((q, idx) => (
           <div key={idx} className={`p-6 rounded-2xl border-2 transition-all bg-white flex flex-col shadow-sm ${status[idx] === 'correct' ? 'border-emerald-200 bg-emerald-50' : status[idx] === 'error' ? 'border-rose-200 bg-rose-50' : 'border-slate-100 focus-within:border-indigo-400'}`}>
             <div className="flex justify-between items-center mb-4">
-              <span className="text-slate-400 text-xs font-bold uppercase tracking-widest">#{idx + 1} - {q.mode === 'NAME_TO_FORMULA' ? (isZH ? '寫出化學式' : 'Write Formula') : (isZH ? '寫出名稱' : 'Write Name')}</span>
+              <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">#{idx + 1} - {q.mode === 'NAME_TO_FORMULA' ? (isZH ? '寫出化學式' : 'Write Formula') : (isZH ? '寫出名稱' : 'Write Name')}</span>
               {status[idx] === 'correct' && <span className="text-emerald-500 font-bold">✓</span>}
               {status[idx] === 'error' && <span className="text-rose-500 font-bold">✗</span>}
             </div>
@@ -898,7 +916,7 @@ const Stage11_AdvancedCompounds: React.FC<{ onComplete: () => void, onBack: () =
         {!allCorrect ? (<button onClick={checkAll} className="px-20 py-5 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl hover:bg-indigo-700 transition-all active:scale-95">檢查答案</button>) : (
           <div className="text-center animate-pop">
              <div className="text-emerald-600 font-black text-2xl mb-6 flex items-center justify-center">全對！</div>
-             <button onClick={onComplete} className="px-24 py-6 bg-emerald-600 text-white font-bold rounded-2xl shadow-2xl hover:bg-emerald-700 transition-all">完成並返回</button>
+             <button onClick={onComplete} className="px-24 py-6 bg-emerald-600 text-white font-bold rounded-2xl shadow-2xl hover:bg-emerald-700 transition-all">完成並解鎖測驗</button>
           </div>
         )}
       </div>
@@ -906,7 +924,7 @@ const Stage11_AdvancedCompounds: React.FC<{ onComplete: () => void, onBack: () =
   );
 };
 
-// --- STAGE 12: FINAL COMPOUND HANDWRITTEN TEST ---
+// --- STAGE 12: FINAL COMPOUND HANDWRITTEN TEST (UPDATED) ---
 
 const Stage12_FinalCompoundHandwrittenTest: React.FC<{ onComplete: () => void, onBack: () => void, language: Language, user: UserProfile, onUserUpdate: (u: UserProfile) => void }> = ({ onComplete, onBack, language, user, onUserUpdate }) => {
   const isZH = language === 'ZH';
@@ -926,44 +944,77 @@ const Stage12_FinalCompoundHandwrittenTest: React.FC<{ onComplete: () => void, o
       try {
         const payload = questions.map(q => ({ zh: q.nameZH, en: q.nameEN, formula: q.formula }));
         const result = await evaluateHandwrittenAnswers(reader.result as string, payload);
-        const savedResult = { score: result.score, timestamp: Date.now(), details: result.results.map(r => ({ question: r.question, expected: r.expected, userAnswer: r.studentWrote, isCorrect: r.isCorrect })) };
-        onUserUpdate({ ...user, stage12Result: savedResult });
+        const details = result.results.map(r => ({ 
+          question: r.question, 
+          expected: r.expected, 
+          userAnswer: r.studentWrote, 
+          isCorrect: r.isCorrect,
+          feedback: r.feedback 
+        }));
+        onUserUpdate({ ...user, stage12Result: { score: result.score, timestamp: Date.now(), details } });
         setEvalResult(result); setIsFinished(true);
       } catch (err) { alert("Evaluation failed. Please try again."); } finally { setLoading(false); }
     };
     reader.readAsDataURL(file);
   };
 
-  const displayResult = evalResult || (user.stage12Result ? { score: user.stage12Result.score, overallFeedback: isZH ? "測驗已完成，這是你的評核紀錄。" : "Test completed. Here is your evaluation record.", results: user.stage12Result.details.map(d => ({ question: d.question, expected: d.expected, studentWrote: d.userAnswer, isCorrect: d.isCorrect })) } : null);
+  const displayResult = evalResult || (user.stage12Result ? { 
+    score: user.stage12Result.score, 
+    overallFeedback: isZH ? "測驗已完成，這是你的評核紀錄。" : "Test completed. Here is your evaluation record.", 
+    results: user.stage12Result.details.map(d => ({ 
+      question: d.question, 
+      expected: d.expected, 
+      studentWrote: d.userAnswer, 
+      isCorrect: d.isCorrect,
+      feedback: d.feedback
+    })) 
+  } : null);
 
   if (isFinished && displayResult) {
     const leaderboard = getGlobalLeaderboard(12);
     return (
       <div className="max-w-6xl mx-auto px-4 mb-20 animate-fade-in">
-        <Header title={isZH ? "階段 12: 最終評核結算" : "Stage 12: Final Summary"} step="12/12" onBack={onBack} instruction={isZH ? "測驗已完成。每個帳號僅限一次最終手寫評估機會。" : "Evaluation complete. One attempt per account."} />
+        <Header title={isZH ? "階段 12: 最終評核結算" : "Stage 12: Final Summary"} step="12/12" onBack={onBack} instruction={isZH ? "測驗已完成。請查看下方各題詳情與錯誤原因。" : "Evaluation complete. Check details and error reasons below."} />
         <div className="grid lg:grid-cols-3 gap-8">
            <div className="lg:col-span-2 space-y-6">
               <div className="bg-indigo-600 text-white p-10 rounded-3xl shadow-xl text-center">
-                 <div className="text-sm font-bold uppercase tracking-widest opacity-80 mb-2">最終得分</div>
+                 <div className="text-sm font-bold uppercase tracking-widest opacity-80 mb-2">{isZH ? "最終得分" : "Final Score"}</div>
                  <div className="text-8xl font-black">{displayResult.score} / 15</div>
               </div>
               <div className="bg-white p-6 rounded-2xl shadow-md border border-slate-100">
-                <h3 className="text-xl font-bold mb-6 text-slate-800 border-b pb-4">批改詳情</h3>
+                <h3 className="text-xl font-bold mb-6 text-slate-800 border-b pb-4">{isZH ? "批改詳情" : "Grading Details"}</h3>
                 <div className="space-y-4">
                   {displayResult.results.map((r, i) => (
-                    <div key={i} className={`p-4 rounded-xl border flex justify-between items-center transition-all ${r.isCorrect ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
-                      <div className="flex-grow">
-                        <div className="font-bold text-slate-800 mb-1">{i+1}. {r.question}</div>
-                        <div className="text-sm normal-case"><span className="text-slate-400">寫法:</span> <span className={r.isCorrect ? 'text-emerald-700 font-bold' : 'text-rose-600 font-bold'}>{formatFormula(r.studentWrote)}</span> {!r.isCorrect && <><span className="mx-2">|</span><span className="text-slate-400">正確:</span> <span className="text-emerald-800 font-bold">{formatFormula(r.expected)}</span></>}</div>
+                    <div key={i} className={`p-4 rounded-xl border flex flex-col transition-all ${r.isCorrect ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="font-bold text-slate-800">{i+1}. {r.question}</div>
+                        <div className={r.isCorrect ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{r.isCorrect ? '✓' : '✗'}</div>
                       </div>
+                      <div className="text-sm normal-case space-y-1">
+                        <div>
+                          <span className="text-slate-400 mr-2">{isZH ? "你的寫法:" : "Your writing:"}</span> 
+                          <span className={r.isCorrect ? 'text-emerald-700 font-bold' : 'text-rose-600 font-bold'}>{formatFormula(r.studentWrote)}</span>
+                        </div>
+                        {!r.isCorrect && (
+                          <div>
+                            <span className="text-slate-400 mr-2">{isZH ? "正確答案:" : "Expected:"}</span> 
+                            <span className="text-emerald-800 font-bold">{formatFormula(r.expected)}</span>
+                          </div>
+                        )}
+                      </div>
+                      {!r.isCorrect && r.feedback && (
+                        <div className="mt-3 p-2 bg-white/70 rounded-lg text-rose-700 text-xs italic border border-rose-100">
+                          💡 {r.feedback}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
            </div>
            <div className="space-y-8">
-              <div className="bg-white p-8 rounded-3xl shadow-xl border border-amber-200"><h3 className="text-xl font-black mb-6 flex items-center text-amber-600">🏆 龍虎榜</h3><div className="space-y-3">{leaderboard.map((u, i) => (<div key={i} className={`flex items-center justify-between p-3 rounded-xl ${u.name === user.name ? 'bg-indigo-50 border-2 border-indigo-200' : 'bg-slate-50 border border-slate-100'}`}><span className="font-bold">{i+1}. {u.name}</span><span className="font-black text-indigo-600">{u.stage12Result!.score}</span></div>))}</div></div>
-              <button onClick={onComplete} className="w-full py-4 bg-emerald-600 text-white font-bold rounded-2xl shadow-lg">返回選單</button>
+              <div className="bg-white p-8 rounded-3xl shadow-xl border border-amber-200"><h3 className="text-xl font-black mb-6 flex items-center text-amber-600">🏆 {isZH ? "全服即時龍虎榜" : "Leaderboard"}</h3><div className="space-y-3">{leaderboard.map((u, i) => (<div key={i} className={`flex items-center justify-between p-3 rounded-xl ${u.name === user.name ? 'bg-indigo-50 border-2 border-indigo-200' : 'bg-slate-50 border border-slate-100'}`}><span className="font-bold">{i+1}. {u.name}</span><span className="font-black text-indigo-600">{u.stage12Result!.score}</span></div>))}</div></div>
+              <button onClick={onComplete} className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg">{isZH ? "完成測驗" : "Finish Test"}</button>
            </div>
         </div>
       </div>
@@ -979,7 +1030,7 @@ const Stage12_FinalCompoundHandwrittenTest: React.FC<{ onComplete: () => void, o
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 mb-10">{questions.map((q, i) => (<div key={i} className="bg-slate-50 p-4 rounded-xl border border-slate-100 font-bold text-slate-800 flex justify-between shadow-sm"><span>{i+1}. {isZH ? q.nameZH : q.nameEN}</span></div>))}</div>
         <div className="text-center p-8 bg-indigo-50/30 rounded-2xl border-2 border-dashed border-indigo-100">
           <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
-          <button onClick={() => fileInputRef.current?.click()} disabled={loading} className={`px-12 py-6 bg-indigo-600 text-white rounded-2xl font-bold text-xl shadow-2xl transition-all ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}>{loading ? "閱卷中..." : "📷 拍照上傳 (15題)"}</button>
+          <button onClick={() => fileInputRef.current?.click()} disabled={loading} className={`px-12 py-6 bg-indigo-600 text-white rounded-2xl font-bold text-xl shadow-2xl transition-all ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}>{loading ? (isZH ? "閱卷中..." : "Grading...") : (isZH ? "📷 拍照上傳 (15題)" : "📷 Upload (15 Questions)")}</button>
         </div>
       </div>
     </div>

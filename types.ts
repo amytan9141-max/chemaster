@@ -37,6 +37,13 @@ export interface UserProfile {
   stage9Result?: {
     score: number;
     timestamp: number;
+    details: {
+      question: string;
+      expected: string;
+      userAnswer: string;
+      isCorrect: boolean;
+      feedback?: string;
+    }[];
   };
   stage12Result?: {
     score: number;
@@ -46,6 +53,7 @@ export interface UserProfile {
       expected: string;
       userAnswer: string;
       isCorrect: boolean;
+      feedback?: string;
     }[];
   };
   challengeAttempts?: number; 
