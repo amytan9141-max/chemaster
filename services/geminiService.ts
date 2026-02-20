@@ -27,7 +27,8 @@ const compressImage = async (base64: string): Promise<string> => {
 };
 
 
-const ai = new GoogleGenAI(import.meta.env.VITE_GEMINI_API_KEY);
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+const ai = new GoogleGenAI(apiKey);
 const visionModel = 'gemini-3-flash-preview';
 const textModel = 'gemini-3-flash-preview';
 
