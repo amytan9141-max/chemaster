@@ -162,7 +162,7 @@ const CHALLENGES_BY_TOPIC: Record<string, EquationChallenge[]> = {
     {
       description: "二氧化碳通入石灰水產生白色沉澱。",
       reactants: [{ formula: "CO2", coefficient: 1 }, { formula: "Ca(OH)2", coefficient: 1 }],
-      products: [{ formula: "CaCO3", coefficient: 1 }, { formula: "H2O", coefficient: 1 }]]
+      products: [{ formula: "CaCO3", coefficient: 1 }, { formula: "H2O", coefficient: 1 }]
     }
 
   ],
