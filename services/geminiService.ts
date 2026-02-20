@@ -26,8 +26,11 @@ const compressImage = async (base64: string): Promise<string> => {
   });
 };
 
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+if (!apiKey) {
+  console.error("❌ 找不到 VITE_GEMINI_API_KEY！請檢查 Netlify 設定。");
+}
+const ai = new GoogleGenAI(apiKey || "");
 const visionModel = 'gemini-3-flash-preview';
 const textModel = 'gemini-3-flash-preview';
 
