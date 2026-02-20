@@ -67,7 +67,7 @@ const ION_BANK: Ion[] = [
   { formula: "Mg^2+", chineseName: "鎂離子", englishName: "Magnesium ion", type: "Cation", charge: 2 },
   { formula: "Ca^2+", chineseName: "鈣離子", englishName: "Calcium ion", type: "Cation", charge: 2 },
   { formula: "Cu^2+", chineseName: "銅(II)離子", englishName: "Copper(II) ion", type: "Cation", charge: 2 },
-  { formula: "Fe^2+", chineseName: "亞鐵離子", englishName: "Iron(II) ion", type: "Cation", charge: 2 },
+  { formula: "Fe^2+", chineseName: "鐵(II)離子", englishName: "Iron(II) ion", type: "Cation", charge: 2 },
   { formula: "Pb^2+", chineseName: "鉛(II)離子", englishName: "Lead(II) ion", type: "Cation", charge: 2 },
   { formula: "Zn^2+", chineseName: "鋅離子", englishName: "Zinc ion", type: "Cation", charge: 2 },
   { formula: "Al^3+", chineseName: "鋁離子", englishName: "Aluminium ion", type: "Cation", charge: 3 },
@@ -76,12 +76,12 @@ const ION_BANK: Ion[] = [
   { formula: "Cl^-", chineseName: "氯離子", englishName: "Chloride ion", type: "Anion", charge: -1 },
   { formula: "Br^-", chineseName: "溴離子", englishName: "Bromide ion", type: "Anion", charge: -1 },
   { formula: "I^-", chineseName: "碘離子", englishName: "Iodide ion", type: "Anion", charge: -1 },
-  { formula: "OH^-", chineseName: "氫氧根離子", englishName: "Hydroxide ion", type: "Anion", charge: -1 },
+  { formula: "OH^-", chineseName: "氫氧離子", englishName: "Hydroxide ion", type: "Anion", charge: -1 },
   { formula: "NO3^-", chineseName: "硝酸根離子", englishName: "Nitrate ion", type: "Anion", charge: -1 },
   { formula: "HCO3^-", chineseName: "碳酸氫根離子", englishName: "Hydrogencarbonate ion", type: "Anion", charge: -1 },
   { formula: "MnO4^-", chineseName: "高錳酸根離子", englishName: "Permanganate ion", type: "Anion", charge: -1 },
-  { formula: "O^2-", chineseName: "氧化物離子", englishName: "Oxide ion", type: "Anion", charge: -2 },
-  { formula: "S^2-", chineseName: "硫化物離子", englishName: "Sulphide ion", type: "Anion", charge: -2 },
+  { formula: "O^2-", chineseName: "氧離子", englishName: "Oxide ion", type: "Anion", charge: -2 },
+  { formula: "S^2-", chineseName: "硫離子", englishName: "Sulphide ion", type: "Anion", charge: -2 },
   { formula: "CO3^2-", chineseName: "碳酸根離子", englishName: "Carbonate ion", type: "Anion", charge: -2 },
   { formula: "SO4^2-", chineseName: "硫酸根離子", englishName: "Sulphate ion", type: "Anion", charge: -2 },
   { formula: "Cr2O7^2-", chineseName: "重鉻酸根離子", englishName: "Dichromate ion", type: "Anion", charge: -2 },
@@ -105,8 +105,8 @@ const MASTER_EQUATIONS: Record<string, ChemicalEquation[]> = {
   TOPIC_4_ACIDS: [
     { reactants: [{formula:"Zn", coefficient:1, nameZH:"鋅", nameEN:"Zinc"}, {formula:"H^+", coefficient:2, nameZH:"氫離子", nameEN:"Hydrogen ion"}], products: [{formula:"Zn^2+", coefficient:1, nameZH:"鋅離子", nameEN:"Zinc ion"}, {formula:"H2", coefficient:1, nameZH:"氫氣", nameEN:"Hydrogen"}], difficulty:"medium" },
     { reactants: [{formula:"Mg", coefficient:1, nameZH:"鎂", nameEN:"Magnesium"}, {formula:"HCl", coefficient:2, nameZH:"鹽酸", nameEN:"Hydrochloric acid"}], products: [{formula:"MgCl2", coefficient:1, nameZH:"氯化鎂", nameEN:"Magnesium chloride"}, {formula:"H2", coefficient:1, nameZH:"氫氣", nameEN:"Hydrogen"}], difficulty:"medium" },
-    { reactants: [{formula:"NaOH", coefficient:1, nameZH:"氫氧化鈉", nameEN:"Sodium hydroxide"}, {formula:"HCl", coefficient:1, nameZH:"鹽酸", nameEN:"Hydrochloric acid"}], products: [{formula:"NaCl", coefficient:1, nameZH:"氯化鈉", nameEN:"Sodium chloride"}, {formula:"H2O", coefficient:1, nameZH:"水", nameEN:"Water"}], difficulty:"easy" },
-    { reactants: [{formula:"NaHCO3", coefficient:1, nameZH:"碳酸氫鈉", nameEN:"Sodium hydrogencarbonate"}, {formula:"HCl", coefficient:1, nameZH:"鹽酸", nameEN:"Hydrochloric acid"}], products: [{formula:"NaCl", coefficient:1, nameZH:"氯化鈉", nameEN:"Sodium chloride"}, {formula:"CO2", coefficient:1, nameZH:"二氧化碳", nameEN:"Carbon dioxide"}, {formula:"H2O", coefficient:1, nameZH:"水", nameEN:"Water"}], difficulty:"medium" },
+    { reactants: [{formula:"NaOH", coefficient:1, nameZH:"氫氧化鈉", nameEN:"Sodium hydroxide"}, {formula:"HCl", coefficient:1, nameZH:"氫氯酸", nameEN:"Hydrochloric acid"}], products: [{formula:"NaCl", coefficient:1, nameZH:"氯化鈉", nameEN:"Sodium chloride"}, {formula:"H2O", coefficient:1, nameZH:"水", nameEN:"Water"}], difficulty:"easy" },
+    { reactants: [{formula:"NaHCO3", coefficient:1, nameZH:"碳酸氫鈉", nameEN:"Sodium hydrogencarbonate"}, {formula:"HCl", coefficient:1, nameZH:"氫氯酸", nameEN:"Hydrochloric acid"}], products: [{formula:"NaCl", coefficient:1, nameZH:"氯化鈉", nameEN:"Sodium chloride"}, {formula:"CO2", coefficient:1, nameZH:"二氧化碳", nameEN:"Carbon dioxide"}, {formula:"H2O", coefficient:1, nameZH:"水", nameEN:"Water"}], difficulty:"medium" },
   ],
   TOPIC_6_ORGANIC: [
     { reactants: [{formula:"CH4", coefficient:1, nameZH:"甲烷", nameEN:"Methane"}, {formula:"O2", coefficient:2, nameZH:"氧氣", nameEN:"Oxygen"}], products: [{formula:"CO2", coefficient:1, nameZH:"二氧化碳", nameEN:"Carbon dioxide"}, {formula:"H2O", coefficient:2, nameZH:"水", nameEN:"Water"}], difficulty:"medium" },
@@ -125,10 +125,10 @@ const MASTER_EQUATIONS: Record<string, ChemicalEquation[]> = {
   REDOX_HALF: [
     { reactants: [{formula:"MnO4^-", coefficient:1, nameZH: "高錳酸根離子", nameEN: "Permanganate ion"}, {formula:"H^+", coefficient:8, nameZH: "氫離子", nameEN: "Hydrogen ion"}, {formula:"e^-", coefficient:5, nameZH: "電子", nameEN: "Electron"}], products: [{formula:"Mn^2+", coefficient:1, nameZH: "錳(II)離子", nameEN: "Manganese(II) ion"}, {formula:"H2O", coefficient:4, nameZH: "水", nameEN: "Water"}], difficulty:"hard" },
     { reactants: [{formula:"Cr2O7^2-", coefficient:1, nameZH: "重鉻酸根離子", nameEN: "Dichromate ion"}, {formula:"H^+", coefficient:14, nameZH: "氫離子", nameEN: "Hydrogen ion"}, {formula:"e^-", coefficient:6, nameZH: "電子", nameEN: "Electron"}], products: [{formula:"Cr^3+", coefficient:2, nameZH: "鉻(III)離子", nameEN: "Chromium(III) ion"}, {formula:"H2O", coefficient:7, nameZH: "水", nameEN: "Water"}], difficulty:"hard" },
-    { reactants: [{formula:"Fe^2+", coefficient:1, nameZH: "亞鐵離子", nameEN: "Iron(II) ion"}], products: [{formula:"Fe^3+", coefficient:1, nameZH: "鐵(III)離子", nameEN: "Iron(III) ion"}, {formula:"e^-", coefficient:1, nameZH: "電子", nameEN: "Electron"}], difficulty: "easy" },
+    { reactants: [{formula:"Fe^2+", coefficient:1, nameZH: "鐵（II）離子", nameEN: "Iron(II) ion"}], products: [{formula:"Fe^3+", coefficient:1, nameZH: "鐵(III)離子", nameEN: "Iron(III) ion"}, {formula:"e^-", coefficient:1, nameZH: "電子", nameEN: "Electron"}], difficulty: "easy" },
   ],
   REDOX_FULL: [
-    { reactants: [{formula:"MnO4^-", coefficient:1, nameZH:"高錳酸根離子", nameEN:"Permanganate ion"}, {formula:"H^+", coefficient:8, nameZH:"氫離子", nameEN:"Hydrogen ion"}, {formula:"Fe^2+", coefficient:5, nameZH:"亞鐵離子", nameEN:"Iron(II) ion"}], products: [{formula:"Mn^2+", coefficient:1, nameZH:"錳(II)離子", nameEN:"Manganese(II) ion"}, {formula:"H2O", coefficient:4, nameZH:"水", nameEN:"Water"}, {formula:"Fe^3+", coefficient:5, nameZH:"鐵(III)離子", nameEN:"Iron(III) ion"}], difficulty:"hard" },
+    { reactants: [{formula:"MnO4^-", coefficient:1, nameZH:"高錳酸根離子", nameEN:"Permanganate ion"}, {formula:"H^+", coefficient:8, nameZH:"氫離子", nameEN:"Hydrogen ion"}, {formula:"Fe^2+", coefficient:5, nameZH:"鐵(II)離子", nameEN:"Iron(II) ion"}], products: [{formula:"Mn^2+", coefficient:1, nameZH:"錳(II)離子", nameEN:"Manganese(II) ion"}, {formula:"H2O", coefficient:4, nameZH:"水", nameEN:"Water"}, {formula:"Fe^3+", coefficient:5, nameZH:"鐵(III)離子", nameEN:"Iron(III) ion"}], difficulty:"hard" },
   ] 
 };
 
@@ -153,7 +153,18 @@ const CHALLENGES_BY_TOPIC: Record<string, EquationChallenge[]> = {
       description: "Heating calcium carbonate solid to undergo thermal decomposition, forming calcium oxide and carbon dioxide.",
       reactants: [{ formula: "CaCO3", coefficient: 1 }],
       products: [{ formula: "CaO", coefficient: 1 }, { formula: "CO2", coefficient: 1 }]
+    },
+    {
+      description: "氧化鈣與水反應生成氫氧化鈣。",
+      reactants: [{ formula: "CaO", coefficient: 1 }, { formula: "H2O", coefficient: 1 }],
+      products: [{ formula: "Ca(OH)2", coefficient: 1 }]
+    },
+    {
+      description: "二氧化碳通入石灰水產生白色沉澱。",
+      reactants: [{ formula: "CO2", coefficient: 1 }, { formula: "Ca(OH)2", coefficient: 1 }],
+      products: [{ formula: "CaCO3", coefficient: 1 }, { formula: "H2O", coefficient: 1 }]]
     }
+
   ],
   TOPIC_3_METALS: [
     {
@@ -162,9 +173,34 @@ const CHALLENGES_BY_TOPIC: Record<string, EquationChallenge[]> = {
       products: [{ formula: "MgO", coefficient: 2 }]
     },
     {
-      description: "鋁在氯氣中燃燒生成氯化鋁。",
-      reactants: [{ formula: "Al", coefficient: 2 }, { formula: "Cl2", coefficient: 3 }],
-      products: [{ formula: "AlCl3", coefficient: 2 }]
+      description: "鋁在氧氣中燃燒生成氧化鋁。",
+      reactants: [{ formula: "Al", coefficient: 4 }, { formula: "O2", coefficient: 3 }],
+      products: [{ formula: "Al2O3", coefficient: 2 }]
+    },
+    {
+      description: "鈉在氧氣中燃燒生成氧化鎂。",
+      reactants: [{ formula: "Na", coefficient: 4 }, { formula: "O2", coefficient: 1 }],
+      products: [{ formula: "Na2O", coefficient: 2 }]
+    },
+    {
+      description: "鉀在氧氣中燃燒生成氧化鎂。",
+      reactants: [{ formula: "K", coefficient: 4 }, { formula: "O2", coefficient: 1 }],
+      products: [{ formula: "K2O", coefficient: 2 }]
+    },
+    {
+      description: "鈣在氧氣中燃燒生成氧化鋁。",
+      reactants: [{ formula: "Ca", coefficient: 2 }, { formula: "O2", coefficient: 1 }],
+      products: [{ formula: "CaO", coefficient: 2 }]
+    },
+    {
+      description: "鐡在氧氣中燃燒生成氧化鐡（II、III)。",
+      reactants: [{ formula: "Fe", coefficient: 3 }, { formula: "O2", coefficient: 2 }],
+      products: [{ formula: "Fe3O4", coefficient: 1 }]
+    },
+    {
+      description: "鋅在氧氣中燃燒生成氧化鋅。",
+      reactants: [{ formula: "Zn", coefficient: 2 }, { formula: "O2", coefficient: 2 }],
+      products: [{ formula: "ZnO", coefficient: 2 }]
     },
     {
       description: "銅片放入硝酸銀溶液中，置換出銀並生成硝酸銅(II)。",
