@@ -6,27 +6,20 @@ const compressImage = async (base64: string): Promise<string> => {
     const img = new Image();
     img.src = base64;
     img.onload = () => {
-
       const maxWidth = 600;
       const quality = 0.4;
-      
       let width = img.width;
       let height = img.height;
-      
       if (width > maxWidth) {
         height = Math.round((height * maxWidth) / width);
         width = maxWidth;
       }
-      
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
-      
       const ctx = canvas.getContext('2d');
       ctx?.drawImage(img, 0, 0, width, height);
-      
       const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-      console.log(`壓縮率: ${Math.round((compressedBase64.length / base64.length) * 100)}%`);
       resolve(compressedBase64);
     };
     img.onerror = reject;
@@ -34,7 +27,7 @@ const compressImage = async (base64: string): Promise<string> => {
 };
 
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+const ai = new GoogleGenAI(import.meta.env.VITE_GEMINI_API_KEY);
 const visionModel = 'gemini-3-flash-preview';
 const textModel = 'gemini-3-flash-preview';
 
@@ -270,19 +263,38 @@ const CHALLENGES_BY_TOPIC: Record<string, EquationChallenge[]> = {
   ]
 };
 
-export const generateEquations = async (count: number = 5, topic: EquationTopic = 'TOPIC_3_METALS', language: Language = 'ZH', history: string[] = []): Promise<{ data: ChemicalEquation[], isOffline: boolean }> => {
-  let pool: ChemicalEquation[] = [];
-  if (topic === 'TOPIC_1_2_EARTH_MICRO') {
-    pool = [...MASTER_EQUATIONS.TOPIC_1_EARTH, ...MASTER_EQUATIONS.TOPIC_2_MICRO];
-  } else if (topic === 'TOPIC_7_8_PERIOD_ENERGY') {
-    pool = [...MASTER_EQUATIONS.TOPIC_7_PERIODICITY, ...MASTER_EQUATIONS.TOPIC_8_ENERGETICS];
-  } else {
-    pool = [...(MASTER_EQUATIONS[topic as string] || [])];
+const LOCAL_TOPICS = [
+  'TOPIC_1_2_EARTH_MICRO', 
+  'TOPIC_3_METALS', 
+  'TOPIC_4_ACIDS', 
+  'TOPIC_6_ORGANIC',
+  'TOPIC_7_8_PERIOD_ENERGY'
+];
+
+export const generateEquations = async (
+  count: number = 5, 
+  topic: EquationTopic = 'TOPIC_3_METALS', 
+  language: Language = 'ZH', 
+  history: string[] = []
+): Promise<{ data: ChemicalEquation[], isOffline: boolean }> => {
+  
+  if (LOCAL_TOPICS.includes(topic as string)) {
+    let pool: ChemicalEquation[] = [];
+    
+    if (topic === 'TOPIC_1_2_EARTH_MICRO') {
+      pool = [...(MASTER_EQUATIONS.TOPIC_1_EARTH || []), ...(MASTER_EQUATIONS.TOPIC_2_MICRO || [])];
+    } else if (topic === 'TOPIC_7_8_PERIOD_ENERGY') {
+      pool = [...(MASTER_EQUATIONS.TOPIC_7_PERIODICITY || []), ...(MASTER_EQUATIONS.TOPIC_8_ENERGETICS || [])];
+    } else {
+      pool = [...(MASTER_EQUATIONS[topic as string] || [])];
+    }
+
+    if (!pool || pool.length === 0) return { data: [], isOffline: true };
+    return { data: shuffleArray(pool).slice(0, count), isOffline: true };
   }
-  
-  if (!pool || pool.length === 0) return { data: [], isOffline: true };
-  
-  return { data: shuffleArray(pool).slice(0, count), isOffline: true };
+
+  console.log(`課題 ${topic} 準備執行 AI 生成模式`);
+  return { data: [], isOffline: false };
 };
 
 export const generateIons = async (count: number = 6, difficulty: string = 'medium', category: 'MONO' | 'POLY' | 'MIXED' = 'MIXED'): Promise<Ion[]> => {
@@ -299,67 +311,60 @@ export const generateIons = async (count: number = 6, difficulty: string = 'medi
 
 export const evaluateHandwrittenAnswers = async (imageBase64: string, questions: any[]): Promise<EvaluationResult> => {
   try {
-    console.log('原始圖片大小:', Math.round(imageBase64.length / 1024), 'KB');
+    console.log('正在處理手寫答案分析...');
     
     const compressedImage = await compressImage(imageBase64);
-    console.log('壓縮後圖片大小:', Math.round(compressedImage.length / 1024), 'KB');
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-    
-    try {
-      const response = await fetch('/.netlify/functions/evaluate-handwriting', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          imageBase64: compressedImage,
-          questions
-        }),
-        signal: controller.signal
-      });
+
+    const model = ai.getGenerativeModel({ model: "gemini-3-flash-preview" });
+
+    const prompt = `
+      你是一位專業的化學老師。請分析這張照片中的手寫化學式。
       
-      clearTimeout(timeoutId);
+      待對比的正確答案列表：
+      ${JSON.stringify(questions.map(q => ({
+        name: q.zh || q.question,
+        formula: q.formula || q.expected
+      })))}
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('伺服器回應錯誤:', response.status, errorText);
-        throw new Error(`Server responded with ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('評分結果:', result);
+      請仔細辨識學生寫的每一個化學式，並與上方列表對比。
       
-      if (result._offline) {
-        console.log('使用離線備用評分');
+      請嚴格按照以下 JSON 格式回傳，不要有任何解釋文字：
+      {
+        "score": 總分(學生對了幾題),
+        "results": [
+          {
+            "question": "題目名稱",
+            "expected": "正確化學式",
+            "studentWrote": "學生實際寫的內容 (若看不清請寫'模糊')",
+            "isCorrect": true/false,
+            "feedback": "若錯誤，請簡短指出哪裡寫錯 (例如: 括號位置不對、電荷錯誤)"
+          }
+        ],
+        "overallFeedback": "給學生的總結鼓勵"
       }
-      
-      return result;
+    `;
 
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      if (fetchError.name === 'AbortError') {
-        console.error('請求超時（30秒）');
-        throw new Error('Request timeout');
+    const imagePart = {
+      inlineData: {
+        data: compressedImage.split(',')[1],
+        mimeType: "image/jpeg"
       }
-      throw fetchError;
-    }
-
-  } catch (error) {
-    console.error('評分失敗:', error);
-    
-    return {
-      score: questions.length,
-      results: questions.map((q, index) => ({
-        question: q.zh || q.question || `Question ${index + 1}`,
-        expected: q.formula || q.expected || '',
-        studentWrote: q.formula || q.expected || '',
-        isCorrect: true,
-        feedback: '系統暫時無法分析圖片，已使用標準答案評分。'
-      })),
-      overallFeedback: '網路或服務暫時不穩定，請稍後再試。'
     };
+
+    const result = await model.generateContent([prompt, imagePart]);
+    const response = await result.response;
+    const text = response.text();
+
+
+    const cleanJson = text.replace(/```json|```/g, "").trim();
+    const evaluation = JSON.parse(cleanJson);
+
+    return evaluation;
+
+  } catch (error: any) {
+    console.error('AI 批改詳細錯誤:', error);
+    
+    throw new Error(error.message || "AI 分析失敗，請確保圖片清晰或檢查網路連線。");
   }
 };
 
